@@ -34,7 +34,7 @@ impl RayMarcher {
         }
     }
 
-    pub fn run(&self) {
+    pub fn run(&self) -> Result<()> {
         let (tx, rx) = mpsc::channel();
         thread::spawn(move || {
             event::read().unwrap();
@@ -45,30 +45,34 @@ impl RayMarcher {
     
         let mut stdout = stdout();
 
-        stdout.execute(cursor::Hide).expect("Error hiding cursor");
+        stdout
+            .execute(cursor::MoveDown(1))?
+            .execute(cursor::Hide)?;
+        
+        let (_, start_y) = cursor::position().unwrap();
 
         loop {
             let now = SystemTime::now().duration_since(start);
 
-            self.draw(now.unwrap().as_millis()).expect("Error drawing to terminal");
+            self.draw(now.unwrap().as_millis(), start_y).expect("Error drawing to terminal");
 
             sleep(Duration::from_millis(1));
 
             if rx.try_recv().is_ok() { 
-                stdout.execute(cursor::Show).expect("Error showing cursor");
+                stdout.execute(cursor::Show)?;
                 process::exit(0) 
             }
         }
     }
 
-    fn draw(&self, time: u128) -> Result<()>{
+    fn draw(&self, time: u128, y_offset: u16) -> Result<()>{
         let mut stdout = stdout();
-    
+
         for y in 0..SIZE_Y {
             for x in 0..SIZE_X {
                 let px = self.get_char(self.get_pixel_brightness(x, y, time));
                 stdout
-                    .queue(cursor::MoveTo(x,y))?
+                    .queue(cursor::MoveTo(x,y + y_offset))?
                     .queue(style::PrintStyledContent(px.magenta()))?;
             }
         }
@@ -78,17 +82,11 @@ impl RayMarcher {
     }
 
     fn get_pixel_brightness(&self, x: u16, y: u16, time: u128) -> f64 {
-        let point = Vec2D::new(x as f64 / SIZE_X as f64, y as f64 / SIZE_Y as f64);
-
-        self.get_uv_brightness(point, time)
-    }
-    
-    
-    fn get_uv_brightness(&self, uv_coord: Vec2D, time: u128) -> f64 {
+        let uv_coord = Vec2D::new(x as f64 / SIZE_X as f64, y as f64 / SIZE_Y as f64);
         let t = (time as f64) / 1000.0;
+        
         // lights
         let light_position = Vec3D::new(1.0, 2.0, -1.0);
-    
     
         // camera
         let ray_direction = self.camera.unproject(uv_coord);
