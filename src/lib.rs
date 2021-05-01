@@ -89,8 +89,14 @@ impl RayMarcher {
     }
 
     fn draw(&mut self, time: u128, y_offset: u16) -> Result<()>{
-        for y in 0..self.config.viewport_size.1 {
-            for x in 0..self.config.viewport_size.0 {
+        // crop viewport to top right for optimization
+        let vp_cropped = (
+            (self.config.viewport_size.0 as f64*0.66) as u16,
+            (self.config.viewport_size.1 as f64*0.66) as u16,
+        );
+
+        for y in 0..vp_cropped.1 {
+            for x in 0..vp_cropped.0 {
                 let px = self.get_char(self.get_pixel_brightness(x, y, time));
                 self.stdout
                     .queue(cursor::MoveTo(x,y + y_offset))?
@@ -150,8 +156,8 @@ impl RayMarcher {
 
 fn raymarch(ray_origin: Vec3D, ray_direction: Vec3D, far_clip: f64, t: f64) -> f64 {
     let mut depth = 0.0;
-    let epsilon = 0.001;
-    const MAX_MARCH_STEPS: u64 = 1000;
+    let epsilon = 0.01;
+    const MAX_MARCH_STEPS: u64 = 100;
 
     for _ in 0..MAX_MARCH_STEPS {
         // Calculate dist to closest surface
