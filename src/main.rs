@@ -1,7 +1,6 @@
 use donut;
 
 fn main(){
-    let d = donut::RayMarcher::new();
+    let mut d = donut::RayMarcher::new();
     d.run();
 }
-

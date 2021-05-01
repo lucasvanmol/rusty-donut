@@ -5,7 +5,7 @@ mod camera;
 use std::{
     time::{SystemTime, Duration},
     sync::{mpsc},
-    io::{stdout, Write},
+    io::{stdout, Write, Stdout},
     process,
     thread::{self, sleep}
 };
@@ -23,6 +23,7 @@ const SIZE_Y: u16 = 30;
 
 pub struct RayMarcher {
     camera: Camera,
+    stdout: Stdout,
 }
 
 impl RayMarcher {
@@ -30,11 +31,12 @@ impl RayMarcher {
         let camera_position = Vec3D::new(-0.5, 0.5, 3.0);
         let camera_direction = Vec3D::new(0.0, 0.0, -1.0);
         Self {
-            camera: Camera::new(camera_position, camera_direction)
+            camera: Camera::new(camera_position, camera_direction),
+            stdout: stdout()
         }
     }
 
-    pub fn run(&self) -> Result<()> {
+    pub fn run(&mut self) -> Result<()> {
         let (tx, rx) = mpsc::channel();
         thread::spawn(move || {
             event::read().unwrap();
@@ -54,7 +56,7 @@ impl RayMarcher {
         loop {
             let now = SystemTime::now().duration_since(start);
 
-            self.draw(now.unwrap().as_millis(), start_y).expect("Error drawing to terminal");
+            self.draw(now.unwrap().as_millis(), start_y)?;
 
             sleep(Duration::from_millis(1));
 
@@ -65,18 +67,16 @@ impl RayMarcher {
         }
     }
 
-    fn draw(&self, time: u128, y_offset: u16) -> Result<()>{
-        let mut stdout = stdout();
-
+    fn draw(&mut self, time: u128, y_offset: u16) -> Result<()>{
         for y in 0..SIZE_Y {
             for x in 0..SIZE_X {
                 let px = self.get_char(self.get_pixel_brightness(x, y, time));
-                stdout
+                self.stdout
                     .queue(cursor::MoveTo(x,y + y_offset))?
                     .queue(style::PrintStyledContent(px.magenta()))?;
             }
         }
-        stdout.flush()?;
+        self.stdout.flush()?;
     
         Ok(())
     }
@@ -84,7 +84,7 @@ impl RayMarcher {
     fn get_pixel_brightness(&self, x: u16, y: u16, time: u128) -> f64 {
         let uv_coord = Vec2D::new(x as f64 / SIZE_X as f64, y as f64 / SIZE_Y as f64);
         let t = (time as f64) / 1000.0;
-        
+
         // lights
         let light_position = Vec3D::new(1.0, 2.0, -1.0);
     
