@@ -45,9 +45,7 @@ impl RayMarcher {
         
         let start = SystemTime::now();
     
-        let mut stdout = stdout();
-
-        stdout
+        self.stdout
             .execute(cursor::MoveDown(1))?
             .execute(cursor::Hide)?;
         
@@ -61,7 +59,7 @@ impl RayMarcher {
             sleep(Duration::from_millis(1));
 
             if rx.try_recv().is_ok() { 
-                stdout.execute(cursor::Show)?;
+                self.stdout.execute(cursor::Show)?;
                 process::exit(0) 
             }
         }
