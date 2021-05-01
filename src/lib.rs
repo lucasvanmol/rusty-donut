@@ -18,21 +18,46 @@ use geometry::{Vec2D, Vec3D};
 use camera::Camera;
 use sdf::scene_sdf;
 
-const SIZE_X: u16 = 75;
-const SIZE_Y: u16 = 30;
+pub mod viewport_sizes {
+    pub const TINY: (u16, u16) = (25, 10);
+    pub const SMALL: (u16, u16) = (50, 20);
+    pub const NORMAL: (u16, u16) = (75, 30);
+    pub const BIG: (u16, u16) = (100, 40);
+}
+
+const CHARSET: [char; 10] = [' ', '.', ':', '-', '=', '+', '*', '#', '%', '@'];
+const CHARSET_HD: [char; 70] = [' ', '.', '\'', '`', '^', '"', ',', ':', ';', 'I', 'l', '!', 'i', '>', '<', '~', '+', '_', '-', '?', ']', '[', '}', '{', '1', ')', '(', '|', '\\', '/', 't', 'f', 'j', 'r', 'x', 'n', 'u', 'v', 'c', 'z', 'X', 'Y', 'U', 'J', 'C', 'L', 'Q', '0', 'O', 'Z', 'm', 'w', 'q', 'p', 'd', 'b', 'k', 'h', 'a', 'o', '*', '#', 'M', 'W', '&', '8', '%', 'B', '@', '$'];
+
+
+pub struct Config {
+    viewport_size: (u16, u16),
+    hd: bool,
+}
+
+impl Config {
+    pub fn new(viewport_size: (u16, u16), hd: bool) -> Self {
+        Self {
+            viewport_size,
+            hd
+        }
+    }
+}
+
 
 pub struct RayMarcher {
     camera: Camera,
     stdout: Stdout,
+    config: Config
 }
 
 impl RayMarcher {
-    pub fn new() -> Self {
+    pub fn new(config: Config) -> Self {
         let camera_position = Vec3D::new(-0.5, 0.5, 3.0);
         let camera_direction = Vec3D::new(0.0, 0.0, -1.0);
         Self {
             camera: Camera::new(camera_position, camera_direction),
-            stdout: stdout()
+            stdout: stdout(),
+            config
         }
     }
 
@@ -56,8 +81,6 @@ impl RayMarcher {
 
             self.draw(now.unwrap().as_millis(), start_y)?;
 
-            sleep(Duration::from_millis(1));
-
             if rx.try_recv().is_ok() { 
                 self.stdout.execute(cursor::Show)?;
                 process::exit(0) 
@@ -66,8 +89,8 @@ impl RayMarcher {
     }
 
     fn draw(&mut self, time: u128, y_offset: u16) -> Result<()>{
-        for y in 0..SIZE_Y {
-            for x in 0..SIZE_X {
+        for y in 0..self.config.viewport_size.1 {
+            for x in 0..self.config.viewport_size.0 {
                 let px = self.get_char(self.get_pixel_brightness(x, y, time));
                 self.stdout
                     .queue(cursor::MoveTo(x,y + y_offset))?
@@ -80,7 +103,7 @@ impl RayMarcher {
     }
 
     fn get_pixel_brightness(&self, x: u16, y: u16, time: u128) -> f64 {
-        let uv_coord = Vec2D::new(x as f64 / SIZE_X as f64, y as f64 / SIZE_Y as f64);
+        let uv_coord = Vec2D::new(x as f64 / self.config.viewport_size.0 as f64, y as f64 / self.config.viewport_size.1 as f64);
         let t = (time as f64) / 1000.0;
 
         // lights
@@ -103,14 +126,25 @@ impl RayMarcher {
     }
 
     fn get_char(&self, brightness: f64) -> char {
-        const CHARS: [char; 10] = [' ', '.', ':', '-', '=', '+', '*', '#', '%', '@'];
-    
-        let mut index = (brightness * CHARS.len() as f64).floor() as usize;
-        if index > CHARS.len() - 1 {
-            index = CHARS.len() - 1;
-        }
-    
-        CHARS[index]
+        if self.config.hd {
+            let charset = CHARSET_HD;
+            let mut index = (brightness * charset.len() as f64).floor() as usize;
+
+            if index > charset.len() - 1 {
+                index = charset.len() - 1;
+            }
+        
+            charset[index]
+        } else {
+            let charset = CHARSET;
+            let mut index = (brightness * charset.len() as f64).floor() as usize;
+
+            if index > charset.len() - 1 {
+                index = charset.len() - 1;
+            }
+        
+            charset[index]
+        }    
     }
 }
 
