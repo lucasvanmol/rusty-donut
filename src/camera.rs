@@ -14,6 +14,10 @@ impl Camera {
         c
     }
 
+    pub fn unproject(&self, uv: Vec2D) -> Vec3D {
+        self.direction + self.e1 * (uv.x - 0.5) + self.e2 * (uv.y - 0.5)
+    }
+
     pub fn update_projection_matrix(&mut self) {
         let n = self.direction.normalized();
 
@@ -37,9 +41,5 @@ impl Camera {
         self.e2 = e1;
 
         self.e1 = e1.cross(&n);
-    }
-
-    pub fn unproject(&self, uv: Vec2D) -> Vec3D {
-        self.direction + self.e1 * (uv.x - 0.5) + self.e2 * (uv.y - 0.5)
     }
 }

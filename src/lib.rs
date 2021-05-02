@@ -3,14 +3,14 @@ mod geometry;
 mod camera;
 
 use std::{
-    time::{SystemTime, Duration},
+    time::{SystemTime},
     sync::{mpsc},
     io::{stdout, Write, Stdout},
     process,
-    thread::{self, sleep}
+    thread::{self}
 };
 use crossterm::{
-    event::{self, Event},
+    event::{self},
     ExecutableCommand, QueueableCommand,
     cursor, style::{self, Colorize}, Result
 };
@@ -28,6 +28,9 @@ pub mod viewport_sizes {
 const CHARSET: [char; 10] = [' ', '.', ':', '-', '=', '+', '*', '#', '%', '@'];
 const CHARSET_HD: [char; 70] = [' ', '.', '\'', '`', '^', '"', ',', ':', ';', 'I', 'l', '!', 'i', '>', '<', '~', '+', '_', '-', '?', ']', '[', '}', '{', '1', ')', '(', '|', '\\', '/', 't', 'f', 'j', 'r', 'x', 'n', 'u', 'v', 'c', 'z', 'X', 'Y', 'U', 'J', 'C', 'L', 'Q', '0', 'O', 'Z', 'm', 'w', 'q', 'p', 'd', 'b', 'k', 'h', 'a', 'o', '*', '#', 'M', 'W', '&', '8', '%', 'B', '@', '$'];
 
+const MAX_MARCH_STEPS: u64 = 100;
+const FAR_CLIP: f64 = 10.0;
+const MIN_DIST: f64 = 0.01;
 
 pub struct Config {
     viewport_size: (u16, u16),
@@ -36,13 +39,9 @@ pub struct Config {
 
 impl Config {
     pub fn new(viewport_size: (u16, u16), hd: bool) -> Self {
-        Self {
-            viewport_size,
-            hd
-        }
+        Self { viewport_size, hd }
     }
 }
-
 
 pub struct RayMarcher {
     camera: Camera,
@@ -119,51 +118,38 @@ impl RayMarcher {
         let ray_direction = self.camera.unproject(uv_coord);
     
         // action!
-        let depth = raymarch(self.camera.position, ray_direction, 10.0, t);
+        let depth = raymarch(self.camera.position, ray_direction, FAR_CLIP, t);
         let mut brightness = 0.0;
     
         if depth > 0.0 {
             let p = self.camera.position + ray_direction * depth;
             brightness = diffuse_lighting(p, estimate_normal(p, t), light_position);
-            //brightness = 1.0;
         }
     
         brightness
     }
 
     fn get_char(&self, brightness: f64) -> char {
-        if self.config.hd {
-            let charset = CHARSET_HD;
-            let mut index = (brightness * charset.len() as f64).floor() as usize;
+        let charset_len = if self.config.hd { CHARSET_HD.len() } else { CHARSET.len() };
 
-            if index > charset.len() - 1 {
-                index = charset.len() - 1;
-            }
-        
-            charset[index]
-        } else {
-            let charset = CHARSET;
-            let mut index = (brightness * charset.len() as f64).floor() as usize;
+        let mut index = (brightness * charset_len as f64).floor() as usize;
 
-            if index > charset.len() - 1 {
-                index = charset.len() - 1;
-            }
+        if index > charset_len - 1 {
+            index = charset_len - 1;
+        }
         
-            charset[index]
-        }    
+        if self.config.hd { CHARSET_HD[index] } else { CHARSET[index] }
     }
 }
 
 fn raymarch(ray_origin: Vec3D, ray_direction: Vec3D, far_clip: f64, t: f64) -> f64 {
     let mut depth = 0.0;
-    let epsilon = 0.01;
-    const MAX_MARCH_STEPS: u64 = 100;
 
     for _ in 0..MAX_MARCH_STEPS {
         // Calculate dist to closest surface
         let dist = scene_sdf(ray_origin + ray_direction * depth, t);
         
-        if dist < epsilon { break; }
+        if dist < MIN_DIST { break; }
 
         depth += dist;
 

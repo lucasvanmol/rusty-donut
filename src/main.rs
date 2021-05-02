@@ -14,8 +14,8 @@ fn main(){
         vp_size = viewport_sizes::BIG;
     }
 
-    let config = Config::new(vp_size,args.contains(&String::from("--hd")));
+    let config = Config::new(vp_size, args.contains(&String::from("--hd")));
     
     let mut d = RayMarcher::new(config);
-    d.run();
+    d.run().expect("An error occured");
 }

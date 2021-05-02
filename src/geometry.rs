@@ -12,13 +12,6 @@ impl Vec2D {
         Self { x, y }
     }
 
-    pub fn complex_square(&self) -> Self {
-        Self {
-            x: self.x * self.x - self.y * self.y,
-            y: 2.0 * self.x * self.y
-        }
-    }
-
     pub fn length_squared(&self) -> f64 {
         self.x * self.x + self.y * self.y
     }
