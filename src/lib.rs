@@ -36,11 +36,12 @@ const MIN_DIST: f64 = 0.01;
 pub struct Config {
     viewport_size: (u16, u16),
     hd: bool,
+    inline: bool
 }
 
 impl Config {
-    pub fn new(viewport_size: (u16, u16), hd: bool) -> Self {
-        Self { viewport_size, hd }
+    pub fn new(viewport_size: (u16, u16), hd: bool, inline: bool) -> Self {
+        Self { viewport_size, hd, inline }
     }
 }
 
@@ -83,7 +84,7 @@ impl RayMarcher {
             .execute(cursor::MoveDown(1))?
             .execute(cursor::Hide)?;
 
-        let (_, start_y) = if cfg!(windows) { 
+        let (_, start_y) = if cfg!(windows) && self.config.inline { 
             cursor::position().unwrap_or_else(|_err| { (0,0) })
         } else {
             (0,0)

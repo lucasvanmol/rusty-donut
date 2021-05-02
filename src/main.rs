@@ -11,6 +11,7 @@ Usage: donut [options]
     options:
         -h, --help  shows this help message
         --sd        use 10 character charset (default 70)
+        --inline    do not clear terminal on start (Windows only)
     
     options (sizes, default is normal size):
         --tiny      shows tiny donut
@@ -30,7 +31,11 @@ Usage: donut [options]
         vp_size = viewport_sizes::HUGE;
     }
 
-    let config = Config::new(vp_size, !args.contains(&String::from("--sd")));
+    let config = Config::new(
+        vp_size,
+        !args.contains(&String::from("--sd")),
+        args.contains(&String::from("--inline"))
+    );
     
     let mut d = RayMarcher::new(config);
     d.run().expect("An error occured");
