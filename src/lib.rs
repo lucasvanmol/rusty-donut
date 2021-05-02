@@ -10,9 +10,9 @@ use std::{
     thread::{self}
 };
 use crossterm::{
-    event::{self},
+    event::{self, Event},
     ExecutableCommand, QueueableCommand,
-    cursor, style::{self, Colorize}, Result
+    cursor, style::{self, Colorize}, Result, terminal
 };
 use geometry::{Vec2D, Vec3D};
 use camera::Camera;
@@ -63,8 +63,16 @@ impl RayMarcher {
 
     pub fn run(&mut self) -> Result<()> {
         let (tx, rx) = mpsc::channel();
+
         thread::spawn(move || {
-            event::read().unwrap();
+            terminal::enable_raw_mode().unwrap();
+            loop {
+                match event::read().unwrap() {
+                    Event::Key(_) => { break },
+                    Event::Resize(_, _) => { break },
+                    Event::Mouse(_) => {}
+                }
+            } 
             tx.send(0).unwrap();
         });
         
@@ -72,8 +80,7 @@ impl RayMarcher {
     
         self.stdout
             .execute(cursor::MoveDown(1))?
-            .execute(cursor::Hide)?;
-        
+            .execute(cursor::Hide)?;       
         let (_, start_y) = cursor::position().unwrap();
 
         loop {
