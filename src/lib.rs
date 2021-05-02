@@ -82,10 +82,12 @@ impl RayMarcher {
         self.stdout
             .execute(cursor::MoveDown(1))?
             .execute(cursor::Hide)?;
-                  
-        let (_, start_y) = cursor::position().unwrap_or_else(|_err| {
+
+        let (_, start_y) = if cfg!(windows) { 
+            cursor::position().unwrap_or_else(|_err| { (0,0) })
+        } else {
             (0,0)
-        });
+        };
 
         if start_y == 0 {
             self.stdout.execute(terminal::Clear(terminal::ClearType::All))?;
