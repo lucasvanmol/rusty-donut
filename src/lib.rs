@@ -73,6 +73,7 @@ impl RayMarcher {
                     Event::Mouse(_) => {}
                 }
             } 
+            terminal::disable_raw_mode().unwrap();
             tx.send(0).unwrap();
         });
         
@@ -80,16 +81,24 @@ impl RayMarcher {
     
         self.stdout
             .execute(cursor::MoveDown(1))?
-            .execute(cursor::Hide)?;       
-        let (_, start_y) = cursor::position().unwrap();
+            .execute(cursor::Hide)?;
+                  
+        let (_, start_y) = cursor::position().unwrap_or_else(|_err| {
+            (0,0)
+        });
+
+        if start_y == 0 {
+            self.stdout.execute(terminal::Clear(terminal::ClearType::All))?;
+        }
 
         loop {
             let now = SystemTime::now().duration_since(start);
 
             self.draw(now.unwrap().as_millis(), start_y)?;
 
-            if rx.try_recv().is_ok() { 
+            if rx.try_recv().is_ok() {
                 self.stdout.execute(cursor::Show)?;
+                self.stdout.execute(cursor::MoveToNextLine(1))?;
                 process::exit(0) 
             }
         }
