@@ -23,6 +23,7 @@ pub mod viewport_sizes {
     pub const SMALL: (u16, u16) = (50, 20);
     pub const NORMAL: (u16, u16) = (75, 30);
     pub const BIG: (u16, u16) = (100, 40);
+    pub const HUGE: (u16, u16) = (150, 60);
 }
 
 const CHARSET: [char; 10] = [' ', '.', ':', '-', '=', '+', '*', '#', '%', '@'];
